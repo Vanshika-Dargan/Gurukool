@@ -60,6 +60,7 @@ io.on('connection',(socket)=>{
         offererId: socket.id,
         iceCandidatesOffer:[],
         answer:null,
+        answerId:null,
         iceCandidatesAnswer:[]
     })
     socket.broadcast.emit('newOfferToAccept',allOffers.slice(-1));
@@ -67,10 +68,18 @@ io.on('connection',(socket)=>{
 
     socket.on('OffererIceCandidate',iceCandidate=>{
 
+        if(iceCandidate.isFromOfferer){
         const offerUnderDesc=allOffers.find(offer=>offer.offererId==iceCandidate.userId);
-
         if(offerUnderDesc){
             offerUnderDesc.iceCandidatesOffer.push(iceCandidate)
+        }
+
+    }
+
+        else{
+        const offerUnderDesc=allOffers.find(offer=>offer.answerId==iceCandidate.userId);
+        const connectedSocket=connectedSockets.find(socket=>socket.sockedId==offerUnderDesc.offerUnderDesc.offererId);
+        socket.to(connectedSocket.sockedId).emit('answererIceCandidatesForOfferer',iceCandidate);
         }
 
     })
