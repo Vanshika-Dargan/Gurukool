@@ -10,6 +10,10 @@ socket.on('newOfferToAccept',offers=>{
 })
 
 
+socket.on('answerFromServer',offererObj=>{
+    setAnswerToPeerConnection(offererObj);
+})
+
 
 const acceptOffer=(offers)=>{
 

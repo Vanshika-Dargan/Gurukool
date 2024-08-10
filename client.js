@@ -87,6 +87,10 @@ const listenAndsendIceCandidatesToSignalingServer =()=>{
 }
 
 
+const setAnswerToPeerConnection = async(offererObj)=>{
+    await peerConnection.setRemoteDescription(offererObj.answer);
+}
+
 
 
 const createOffer= async()=>{

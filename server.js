@@ -34,8 +34,17 @@ const httpsServer=https.createServer(options,app).listen(PORT,()=>{
 
 // an array to store all offers
 const allOffers=[];
+
+// an array to store all connected sockets
+const connectedSockets=[];
+
+
 io.on('connection',(socket)=>{
     console.log('New User joined',socket.id);
+
+    connectedSockets.push({
+        socketId: socket.id,
+    })
     
     // send him all the offers of the connected clients..;
     if(allOffers.length > 0){
@@ -65,6 +74,25 @@ io.on('connection',(socket)=>{
         }
 
     })
+
+
+    socket.on('answer',(offerObj,ackFn)=>{
+        console.log('Recived answer from ',socket.id);
+        
+        const updateOffer=allOffers.find(offer=>offer.offererId==offerObj.offererId);
+        
+        if(!updateOffer){
+            console.log('No offer to update');
+            return;
+        }
+
+        updateOffer.answer=offerObj.answer;
+        ackFn(updateOffer.iceCandidatesOffer);
+        const connectedSocket=connectedSockets.find(socket=>socket.socketId==offerObj.offererId);
+        socket.to(connectedSocket).emit('answerFromServer',updateOffer)
+    })
+
+
 
 
 
