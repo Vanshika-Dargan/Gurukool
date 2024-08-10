@@ -4,6 +4,7 @@ let localStream;
 let remoteStream;
 let peerConnection;
 let offer;
+let answer;
 
 
 let stunServers={
@@ -31,7 +32,7 @@ const call = async()=>{
     await getUserMediaStream();
     await createPeerConnection();
     await createOffer();
-    sendOffertoSignalingServer();
+    await sendOffertoSignalingServer();
     
     }
 
@@ -47,7 +48,7 @@ const getUserMediaStream = async() => {
 }
 
 
-const createPeerConnection = async() =>{
+const createPeerConnection = async(offererOffer) =>{
 peerConnection = await new RTCPeerConnection(stunServers);
 
 console.log('Peer Connection',peerConnection);
@@ -57,6 +58,10 @@ remoteStream=document.getElementById('others-media').srcObject;
 console.log('Other User Remote stream',remoteStream);
 addLocalTrackToPeerConnection();
 listenAndsendIceCandidatesToSignalingServer();
+if(offererOffer){
+    listenForOffererTrackAndAddToPeerConnection();
+    await peerConnection.setRemoteDescription(offererOffer.offer);
+}
 }
 
 const addLocalTrackToPeerConnection =()=>{
@@ -74,7 +79,8 @@ const listenAndsendIceCandidatesToSignalingServer =()=>{
         console.log('Ice candidate',event.candidate);
         if(event.candidate){
             socket.emit('OffererIceCandidate',{
-                iceCandidate: event.candidate
+                iceCandidate: event.candidate,
+                userId: socket.id
             })
         }
     })
@@ -86,19 +92,46 @@ const listenAndsendIceCandidatesToSignalingServer =()=>{
 const createOffer= async()=>{
     offer= await peerConnection.createOffer();
     console.log('Offer:',offer);
-    peerConnection.setLocalDescription(offer);
+    await peerConnection.setLocalDescription(offer);
     
 }
-
-const sendOffertoSignalingServer =()=>{
+const createAnswer = async()=>{
+    answer=await peerConnection.createAnswer({});
+    console.log('Answer',answer);
+    await peerConnection.setLocalDescription(answer);
+}
+const sendOffertoSignalingServer =async()=>{
     console.log('Sending offer to the signaling server..')
-    socket.emit('offer',offer);
+   await socket.emit('offer',offer);
 }
 
+const sendAnswerToSignalingServer =async(offererObj)=>{
 
-const answerOffer =async()=>{
+    offererObj.answer=answer;
+    const offererIceCandidate=await socket.emitWithAck('answer',offererObj);
+
+    offererIceCandidate.forEach(iceCandidate=>{
+    peerConnection.addIceCandidate(iceCandidate);
+    })
+
+}
+
+const listenForOffererTrackAndAddToPeerConnection=()=>{
+
+    peerConnection.addEventListener('track',event=>{
+        event.streams[0].getTracks().forEach(track=>{
+            remoteStream.addTrack(track,remoteStream);
+            console.log('Connected Successfully...')
+        })
+    })
+}
+
+const answerOffer =async(offererOffer)=>{
 
     await getUserMediaStream();
+    await createPeerConnection(offererOffer);
+    await createAnswer();
+    await sendAnswerToSignalingServer(offererOffer);
 }
 
 call();

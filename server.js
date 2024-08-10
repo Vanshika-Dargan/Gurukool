@@ -48,11 +48,22 @@ io.on('connection',(socket)=>{
         console.log('Recieved offer from',socket.id);
     allOffers.push({
         offer: offer,
+        offererId: socket.id,
         iceCandidatesOffer:[],
         answer:null,
         iceCandidatesAnswer:[]
     })
     socket.broadcast.emit('newOfferToAccept',allOffers.slice(-1));
+    })
+
+    socket.on('OffererIceCandidate',iceCandidate=>{
+
+        const offerUnderDesc=allOffers.find(offer=>offer.offererId==iceCandidate.userId);
+
+        if(offerUnderDesc){
+            offerUnderDesc.iceCandidatesOffer.push(iceCandidate)
+        }
+
     })
 
 
