@@ -125,15 +125,11 @@ io.on('connection',(socket)=>{
     })
 
 
-
-
-
-
-
-
-
     socket.on('disconnect', () => {
-        console.log('User left',socket.id);
+        console.log('User left',{
+            userId: userId,
+            socketId: socket.id,
+        });
       });
 })
 
