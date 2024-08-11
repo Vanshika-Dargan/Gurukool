@@ -29,7 +29,7 @@ const acceptOffer=(offers)=>{
 offers.forEach(offer=>{
 console.log('I am currently in the process of accepting offer',offer);
 const answerBtn=document.createElement('div');
-answerBtn.innerHTML=`<button class=btn btn-success col-1>Answer</button>`;
+answerBtn.innerHTML=`<button class="btn btn-success col-1">Answer</button>`;
 answerBtn.addEventListener('click',()=>answerOffer(offer));
 
 parentDiv.appendChild(answerBtn);
