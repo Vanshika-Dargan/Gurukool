@@ -5,7 +5,7 @@ let remoteStream;
 let peerConnection;
 let offer;
 let answer;
-
+let isFromOfferer=false;
 
 let stunServers={
     iceServers:[
@@ -97,6 +97,7 @@ const createOffer= async()=>{
     offer= await peerConnection.createOffer();
     console.log('Offer:',offer);
     await peerConnection.setLocalDescription(offer);
+    isFromOfferer=true;
     
 }
 const createAnswer = async()=>{
@@ -128,6 +129,11 @@ const listenForOffererTrackAndAddToPeerConnection=()=>{
             console.log('Connected Successfully...')
         })
     })
+}
+
+const addIceCandidateToPeerConnection=(iceCandidate)=>{
+    peerConnection.addIceCandidate(iceCandidate);
+    console.log('Ice Candidate Added to Peer Connection...')
 }
 
 const answerOffer =async(offererOffer)=>{

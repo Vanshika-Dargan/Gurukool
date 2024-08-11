@@ -10,6 +10,11 @@ socket.on('newOfferToAccept',offers=>{
 })
 
 
+socket.on('iceCandidateFromServer',iceCandidate=>{
+    addIceCandidateToPeerConnection(iceCandidate);
+})
+
+
 socket.on('answerFromServer',offererObj=>{
     setAnswerToPeerConnection(offererObj);
 })
