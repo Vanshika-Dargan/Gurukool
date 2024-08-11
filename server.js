@@ -89,8 +89,10 @@ io.on('connection',(socket)=>{
 
         else{
         const offerUnderDesc=allOffers.find(offer=>offer.answerId==iceCandidate.userId);
-        const offerToSendTo=connectedSockets.find(socket=>socket.sockedId==offerUnderDesc.offerUnderDesc.offererId);
+        if(offerUnderDesc){
+        const offerToSendTo=connectedSockets.find(socket=>socket.sockedId==offerUnderDesc.offererId);
         socket.to(offerToSendTo.sockedId).emit('iceCandidateFromServer',iceCandidate.iceCandidate);
+        }
         }
 
     })
