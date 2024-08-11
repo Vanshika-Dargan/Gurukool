@@ -78,7 +78,7 @@ const listenAndsendIceCandidatesToSignalingServer =()=>{
     
         console.log('Ice candidate',event.candidate);
         if(event.candidate){
-            socket.emit('OffererIceCandidate',{
+            socket.emit('iceCandidate',{
                 iceCandidate: event.candidate,
                 userId: socket.id
             })

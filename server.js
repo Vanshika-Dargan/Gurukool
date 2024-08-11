@@ -66,20 +66,31 @@ io.on('connection',(socket)=>{
     socket.broadcast.emit('newOfferToAccept',allOffers.slice(-1));
     })
 
-    socket.on('OffererIceCandidate',iceCandidate=>{
+    socket.on('iceCandidate',iceCandidate=>{
 
+
+        // if ice candidate is from the offerer we need to send it to the answerer
         if(iceCandidate.isFromOfferer){
         const offerUnderDesc=allOffers.find(offer=>offer.offererId==iceCandidate.userId);
         if(offerUnderDesc){
             offerUnderDesc.iceCandidatesOffer.push(iceCandidate)
+            if(offerUnderDesc.answerId){
+               const answerToSendTo= connectedSockets.find(connectedSocket=>connectedSocket.sockedId==offerUnderDesc.offererId);
+                if(answerToSendTo){
+                    socket.to(answerToSendTo.sockedId).emit('iceCandidateFromServer',iceCandidate.iceCandidate);
+                }
+                else{
+                    console.log("No answerer exists to recieve ice candidates of offerer")
+                }
+            }
         }
 
     }
 
         else{
         const offerUnderDesc=allOffers.find(offer=>offer.answerId==iceCandidate.userId);
-        const connectedSocket=connectedSockets.find(socket=>socket.sockedId==offerUnderDesc.offerUnderDesc.offererId);
-        socket.to(connectedSocket.sockedId).emit('answererIceCandidatesForOfferer',iceCandidate);
+        const offerToSendTo=connectedSockets.find(socket=>socket.sockedId==offerUnderDesc.offerUnderDesc.offererId);
+        socket.to(offerToSendTo.sockedId).emit('iceCandidateFromServer',iceCandidate.iceCandidate);
         }
 
     })
