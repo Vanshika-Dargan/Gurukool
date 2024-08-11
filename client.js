@@ -6,35 +6,51 @@ let peerConnection;
 let offer;
 let answer;
 let isFromOfferer=false;
+let userId=null;
 
 let stunServers={
     iceServers:[
         {
             urls:[
               'stun:stun.l.google.com:19302',
-              'stun:stun1.l.google.com:19302' 
+              'stun:stun1.l.google.com:19302' ,
+              'stun:stun3.l.google.com:19302',
+              'stun:stun4.l.google.com:19302'
             ]
         }
     ]
 }
 
+const generateRandomUserId=()=>{
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){
+        const random = (Math.random()*16) | 0;
+        const v= c=='x'? random : (random & 0x3) | 0x8;
+        return v.toString(16);
+    })
+}
+userId=generateRandomUserId();
+console.log(`new user joins,user id: ${userId}`);
+console.log(`user: ${userId} connected to the signaling server`);
+const socket= io.connect('https://localhost:3000',{
+auth:{
+    userId
+}
+});
 
 
-console.log('New user joins..')
-console.log("New user connected to the signaling server")
-const socket= io.connect('https://localhost:3000');
 
-
-// if the new user intiates a call
-const call = async()=>{
+// if the new user intiates the call
+const connect = async()=>{
     
-    console.log('New user intiates a call')
+    console.log(`user: ${userId} intiates a call`)
     await getUserMediaStream();
     await createPeerConnection();
     await createOffer();
     await sendOffertoSignalingServer();
     
     }
+   
+
 
 const getUserMediaStream = async() => {
     
@@ -44,18 +60,19 @@ const getUserMediaStream = async() => {
        audio:true
     })
     document.getElementById('my-media').srcObject=localStream;
-    console.log('New user local stream',localStream);
+    console.log(`user: ${userId} local stream`,localStream);
 }
 
 
 const createPeerConnection = async(offererOffer) =>{
 peerConnection = await new RTCPeerConnection(stunServers);
 
-console.log('Peer Connection',peerConnection);
+console.log(`Peer Connection for ${userId}`,peerConnection);
 remoteStream = new MediaStream();
 remoteStream=document.getElementById('others-media').srcObject;
 
-console.log('Other User Remote stream',remoteStream);
+console.log('other user remote stream',remoteStream);
+
 addLocalTrackToPeerConnection();
 listenAndsendIceCandidatesToSignalingServer();
 if(offererOffer){
@@ -67,7 +84,7 @@ if(offererOffer){
 const addLocalTrackToPeerConnection =()=>{
  
     localStream.getTracks().forEach(track => {
-        console.log('New track added to peer connection local stream',track);
+    console.log(`New track added to peer connection local stream for user: ${userId}`,track);
     peerConnection.addTrack(track,localStream);
     });
 }
@@ -76,11 +93,13 @@ const listenAndsendIceCandidatesToSignalingServer =()=>{
 
     peerConnection.addEventListener('icecandidate',event=>{
     
-        console.log('Ice candidate',event.candidate);
+        console.log(`Ice candidate for user: ${userId}`,event.candidate);
         if(event.candidate){
             socket.emit('iceCandidate',{
                 iceCandidate: event.candidate,
-                userId: socket.id
+                userId: socket.id,
+                iceUserId:userId,
+                isFromOfferer
             })
         }
     })
@@ -95,7 +114,7 @@ const setAnswerToPeerConnection = async(offererObj)=>{
 
 const createOffer= async()=>{
     offer= await peerConnection.createOffer();
-    console.log('Offer:',offer);
+    console.log(`Offer: for user: ${userId}`,offer);
     await peerConnection.setLocalDescription(offer);
     isFromOfferer=true;
     
@@ -144,7 +163,7 @@ const answerOffer =async(offererOffer)=>{
     await sendAnswerToSignalingServer(offererOffer);
 }
 
-call();
+document.getElementById('call').addEventListener('click',connect);
 
 
 

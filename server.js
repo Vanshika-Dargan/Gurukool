@@ -40,10 +40,13 @@ const connectedSockets=[];
 
 
 io.on('connection',(socket)=>{
-    console.log('New User joined',socket.id);
 
+    userId=socket.handshake.auth.userId;
+    console.log(`user: ${userId} joined`);
+     
     connectedSockets.push({
         socketId: socket.id,
+        userId: userId
     })
     
     // send him all the offers of the connected clients..;
@@ -54,12 +57,16 @@ io.on('connection',(socket)=>{
     // it is going to send its own offer to the server, which will save in offers array
     // and then send it to all clients expect this new one.
     socket.on('offer',offer=>{
-        console.log('Recieved offer from',socket.id);
+        console.log(`Recieved offer from user: ${userId}`);
     allOffers.push({
         offer: offer,
+        offerUserId:userId,
+        offerSocketId:socket.id,
         offererId: socket.id,
         iceCandidatesOffer:[],
         answer:null,
+        answerUserId:null,
+        answerSocketId:null,
         answerId:null,
         iceCandidatesAnswer:[]
     })
@@ -68,11 +75,13 @@ io.on('connection',(socket)=>{
 
     socket.on('iceCandidate',iceCandidate=>{
 
-
+    
         // if ice candidate is from the offerer we need to send it to the answerer
         if(iceCandidate.isFromOfferer){
-        const offerUnderDesc=allOffers.find(offer=>offer.offererId==iceCandidate.userId);
+        console.log(`Recieved ice candidate from the offerer: ${userId}`);
+        const offerUnderDesc=allOffers.find(offer=>offer.offerUserId==iceCandidate.iceUserId);
         if(offerUnderDesc){
+            console.log(`Offerer found with id: ${iceCandidate.iceUserId}`);
             offerUnderDesc.iceCandidatesOffer.push(iceCandidate)
             if(offerUnderDesc.answerId){
                const answerToSendTo= connectedSockets.find(connectedSocket=>connectedSocket.sockedId==offerUnderDesc.offererId);
@@ -83,6 +92,7 @@ io.on('connection',(socket)=>{
                     console.log("No answerer exists to recieve ice candidates of offerer")
                 }
             }
+            console.log('Offer updated with ice candidates',offerUnderDesc);
         }
 
     }
