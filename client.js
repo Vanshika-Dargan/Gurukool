@@ -46,65 +46,64 @@ const connect = async()=>{
     await getUserMediaStream();
     await createPeerConnection();
     await createOffer();
-    await sendOffertoSignalingServer();
+    await sendOfferToSignalingServer();
     
     }
    
 
 
-const getUserMediaStream = async() => {
-    
-    // ask the new user to share his audio and video and set it to his local stream
-    localStream=await navigator.mediaDevices.getUserMedia({
-        video:true,
-       audio:true
-    })
-    document.getElementById('my-media').srcObject=localStream;
-    console.log(`user: ${userId} local stream`,localStream);
-}
+const getUserMediaStream = async () => {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('my-media').srcObject = localStream;
+        console.log(`User: ${userId} local stream`, localStream);
+    } catch (error) {
+        console.error('Error getting user media:', error);
+    }
+};
 
+const createPeerConnection = async (offererOffer) => {
+    try {
+        peerConnection = new RTCPeerConnection(stunServers);
 
-const createPeerConnection = async(offererOffer) =>{
-peerConnection = await new RTCPeerConnection(stunServers);
+        console.log(`Peer Connection for ${userId}`, peerConnection);
 
-console.log(`Peer Connection for ${userId}`,peerConnection);
-remoteStream = new MediaStream();
-remoteStream=document.getElementById('others-media').srcObject;
+        remoteStream = new MediaStream();
+        document.getElementById('others-media').srcObject = remoteStream;
 
-console.log('other user remote stream',remoteStream);
+        addLocalTrackToPeerConnection();
+        listenAndSendIceCandidatesToSignalingServer();
+        listenForOffererTrackAndAddToPeerConnection();
+        if (offererOffer) {
+          
+            await peerConnection.setRemoteDescription(offererOffer.offer);
+            console.log(`Peer Connection remote description changed`);
+        }
+    } catch (error) {
+        console.error('Error creating peer connection:', error);
+    }
+};
 
-addLocalTrackToPeerConnection();
-listenAndsendIceCandidatesToSignalingServer();
-if(offererOffer){
-    listenForOffererTrackAndAddToPeerConnection();
-    await peerConnection.setRemoteDescription(offererOffer.offer);
-    console.log(`Peer Connection remote description changed`);
-}
-}
-
-const addLocalTrackToPeerConnection =()=>{
- 
+const addLocalTrackToPeerConnection = () => {
     localStream.getTracks().forEach(track => {
     console.log(`New track added to peer connection local stream for user: ${userId}`,track);
     peerConnection.addTrack(track,localStream);
     });
-}
+};
 
-const listenAndsendIceCandidatesToSignalingServer =()=>{
-
-    peerConnection.addEventListener('icecandidate',event=>{
-    
-        console.log(`Ice candidate for user: ${userId}`,event.candidate);
-        if(event.candidate){
-            socket.emit('iceCandidate',{
+const listenAndSendIceCandidatesToSignalingServer = () => {
+    peerConnection.addEventListener('icecandidate', event => {
+        console.log(`ICE candidate for user: ${userId}`, event.candidate);
+        if (event.candidate) {
+            socket.emit('iceCandidate', {
                 iceCandidate: event.candidate,
                 userId: socket.id,
-                iceUserId:userId,
+                iceUserId: userId,
                 isFromOfferer
-            })
+            });
         }
-    })
-}
+    });
+};
 
 
 const setAnswerToPeerConnection = async(offererObj)=>{
@@ -113,35 +112,51 @@ const setAnswerToPeerConnection = async(offererObj)=>{
 
 
 
-const createOffer= async()=>{
-    offer= await peerConnection.createOffer();
-    console.log(`Offer: for user: ${userId}`,offer);
-    await peerConnection.setLocalDescription(offer);
-    
-    
-}
-const createAnswer = async()=>{
-    answer=await peerConnection.createAnswer({});
-    console.log('Answer',answer);
-    await peerConnection.setLocalDescription(answer);
-}
-const sendOffertoSignalingServer =async()=>{
-    console.log('Sending offer to the signaling server..')
-   await socket.emit('offer',offer);
-}
+const createOffer = async () => {
+    try {
+        offer = await peerConnection.createOffer();
+        console.log(`Offer for user: ${userId}`, offer);
+        await peerConnection.setLocalDescription(offer);
+    } catch (error) {
+        console.error('Error creating offer:', error);
+    }
+};
 
-const sendAnswerToSignalingServer =async(offererObj)=>{
+const createAnswer = async () => {
+    try {
+        answer = await peerConnection.createAnswer();
+        console.log('Answer', answer);
+        await peerConnection.setLocalDescription(answer);
+    } catch (error) {
+        console.error('Error creating answer:', error);
+    }
+};
 
-    offererObj.answer=answer;
-    offererObj.answerUserId=userId;
-    console.log(`Offer updated with answer`,offererObj)
-    const offererIceCandidate=await socket.emitWithAck('answer',offererObj);
-    console.log(`offer ice candidates recieved`,offererIceCandidate);
-    offererIceCandidate.forEach(iceCandidate=>{
-    peerConnection.addIceCandidate(iceCandidate);
-    })
+const sendOfferToSignalingServer = async () => {
+    console.log('Sending offer to the signaling server..');
+    try {
+        await socket.emit('offer', offer);
+    } catch (error) {
+        console.error('Error sending offer to signaling server:', error);
+    }
+};
 
-}
+const sendAnswerToSignalingServer = async (offererObj) => {
+    try {
+        offererObj.answer = answer;
+        offererObj.answerUserId = userId;
+        console.log(`Offer updated with answer`, offererObj);
+        const offererIceCandidate = await new Promise((resolve) => {
+            socket.emit('answer', offererObj, (iceCandidates) => resolve(iceCandidates));
+        });
+        console.log(`Offer ICE candidates received`, offererIceCandidate);
+        offererIceCandidate.forEach(iceCandidate => {
+            peerConnection.addIceCandidate(iceCandidate);
+        });
+    } catch (error) {
+        console.error('Error sending answer to signaling server:', error);
+    }
+};
 
 const listenForOffererTrackAndAddToPeerConnection=()=>{
 
