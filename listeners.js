@@ -22,8 +22,15 @@ socket.on('answerFromServer',offererObj=>{
 
 const acceptOffer=(offers)=>{
 
+   const parentDiv= document.getElementById('answer');
+
 offers.forEach(offer=>{
-console.log('I am currently in the process of accepting offer'+offer);
-answerOffer(offer);
+console.log('I am currently in the process of accepting offer',offer);
+const answerBtn=document.createElement('div');
+answerBtn.innerHTML=`<button class=btn btn-success col-1>Answer</button>`;
+answerBtn.addEventListener('click',()=>answerOffer(offer));
+
+parentDiv.appendChild(answerBtn);
+
 })
 }
