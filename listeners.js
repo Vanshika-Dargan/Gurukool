@@ -11,11 +11,13 @@ socket.on('newOfferToAccept',offers=>{
 
 
 socket.on('iceCandidateFromServer',iceCandidate=>{
+    console.log('Ice candidate recieved from server');
     addIceCandidateToPeerConnection(iceCandidate);
 })
 
 
 socket.on('answerFromServer',offererObj=>{
+    console.log('Offer With Answer recieved from server...')
     setAnswerToPeerConnection(offererObj);
 })
 

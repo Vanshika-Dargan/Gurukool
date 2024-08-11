@@ -41,7 +41,7 @@ auth:{
 
 // if the new user intiates the call
 const connect = async()=>{
-    
+    isFromOfferer=true;
     console.log(`user: ${userId} intiates a call`)
     await getUserMediaStream();
     await createPeerConnection();
@@ -78,6 +78,7 @@ listenAndsendIceCandidatesToSignalingServer();
 if(offererOffer){
     listenForOffererTrackAndAddToPeerConnection();
     await peerConnection.setRemoteDescription(offererOffer.offer);
+    console.log(`Peer Connection remote description changed`);
 }
 }
 
@@ -116,7 +117,7 @@ const createOffer= async()=>{
     offer= await peerConnection.createOffer();
     console.log(`Offer: for user: ${userId}`,offer);
     await peerConnection.setLocalDescription(offer);
-    isFromOfferer=true;
+    
     
 }
 const createAnswer = async()=>{
@@ -132,8 +133,10 @@ const sendOffertoSignalingServer =async()=>{
 const sendAnswerToSignalingServer =async(offererObj)=>{
 
     offererObj.answer=answer;
+    offererObj.answerUserId=userId;
+    console.log(`Offer updated with answer`,offererObj)
     const offererIceCandidate=await socket.emitWithAck('answer',offererObj);
-
+    console.log(`offer ice candidates recieved`,offererIceCandidate);
     offererIceCandidate.forEach(iceCandidate=>{
     peerConnection.addIceCandidate(iceCandidate);
     })
@@ -156,7 +159,8 @@ const addIceCandidateToPeerConnection=(iceCandidate)=>{
 }
 
 const answerOffer =async(offererOffer)=>{
-
+    isFromOfferer=false;
+    console.log('I have accepted the offer',offererOffer);
     await getUserMediaStream();
     await createPeerConnection(offererOffer);
     await createAnswer();

@@ -73,17 +73,43 @@ io.on('connection',(socket)=>{
     socket.broadcast.emit('newOfferToAccept',allOffers.slice(-1));
     })
 
-    socket.on('iceCandidate',iceCandidate=>{
 
-    
+    socket.on('answer',(offerObj,ackFn)=>{
+        // console.log('Answer recieved from ',offerObj.answerUserId);
+        
+        const updateOffer=allOffers.find(offer=>offer.offerUserId === offerObj.offerUserId);
+        
+        // console.log(`Found the offer to update with answer`);
+        if(!updateOffer){
+            console.log('No offer to update');
+            return;
+        }
+       
+        //console.log(`Updated offer with answer`,offerObj);
+        ackFn(updateOffer.iceCandidatesOffer);
+        updateOffer.answer=offerObj.answer;
+        updateOffer.answerUserId=userId;
+        const connectedSocket=connectedSockets.find(socket=>socket.userId==offerObj.offerUserId);
+        console.log(connectedSocket);
+        console.log('HI');
+        console.log(connectedSocket.socketId);
+        console.log(updateOffer);
+        socket.to(connectedSocket.socketId).emit('answerFromServer',updateOffer)
+    })
+
+    socket.on('iceCandidate',iceCandidate=>{
+        // console.log(iceCandidate.isFromOfferer);
         // if ice candidate is from the offerer we need to send it to the answerer
         if(iceCandidate.isFromOfferer){
-        console.log(`Recieved ice candidate from the offerer: ${userId}`);
-        const offerUnderDesc=allOffers.find(offer=>offer.offerUserId==iceCandidate.iceUserId);
+        // console.log(`Recieved ice candidate from the offerer: ${userId}`);
+        const offerUnderDesc=allOffers.find(offer=>offer.offerUserId === iceCandidate.iceUserId);
+       // console.log(offerUnderDesc);
         if(offerUnderDesc){
-            console.log(`Offerer found with id: ${iceCandidate.iceUserId}`);
-            offerUnderDesc.iceCandidatesOffer.push(iceCandidate)
-            if(offerUnderDesc.answerId){
+            // console.log(`Offerer found with id: ${iceCandidate.iceUserId}`);
+            offerUnderDesc.iceCandidatesOffer.push(iceCandidate.iceCandidate);
+
+            if(offerUnderDesc.answerUserId){
+                 console.log(`Answerer exists for the offer of user: ${iceCandidate.iceUserId}`);
                const answerToSendTo= connectedSockets.find(connectedSocket=>connectedSocket.sockedId==offerUnderDesc.offererId);
                 if(answerToSendTo){
                     socket.to(answerToSendTo.sockedId).emit('iceCandidateFromServer',iceCandidate.iceCandidate);
@@ -92,13 +118,15 @@ io.on('connection',(socket)=>{
                     console.log("No answerer exists to recieve ice candidates of offerer")
                 }
             }
-            console.log('Offer updated with ice candidates',offerUnderDesc);
+            //console.log('Offer updated with ice candidates',offerUnderDesc);
         }
 
     }
 
         else{
-        const offerUnderDesc=allOffers.find(offer=>offer.answerId==iceCandidate.userId);
+            // console.log(`Recieved ice candidate from the answerer: ${userId}`);
+        const offerUnderDesc=allOffers.find(offer=>offer.answerUserId==iceCandidate.userId);
+        // console.log(`Offerer found for the answerer`,offerUnderDesc)
         if(offerUnderDesc){
         const offerToSendTo=connectedSockets.find(socket=>socket.sockedId==offerUnderDesc.offererId);
         socket.to(offerToSendTo.sockedId).emit('iceCandidateFromServer',iceCandidate.iceCandidate);
@@ -108,21 +136,7 @@ io.on('connection',(socket)=>{
     })
 
 
-    socket.on('answer',(offerObj,ackFn)=>{
-        console.log('Recived answer from ',socket.id);
-        
-        const updateOffer=allOffers.find(offer=>offer.offererId==offerObj.offererId);
-        
-        if(!updateOffer){
-            console.log('No offer to update');
-            return;
-        }
 
-        updateOffer.answer=offerObj.answer;
-        ackFn(updateOffer.iceCandidatesOffer);
-        const connectedSocket=connectedSockets.find(socket=>socket.socketId==offerObj.offererId);
-        socket.to(connectedSocket).emit('answerFromServer',updateOffer)
-    })
 
 
     socket.on('disconnect', () => {
